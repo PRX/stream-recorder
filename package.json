@@ -1,8 +1,25 @@
 {
   "name": "stream-recorder",
   "version": "0.0.1",
+  "type": "module",
+  "engines": {
+    "node": ">= 24.0.0"
+  },
   "description": "Lambda for orchestrating stream recordings via Oxbow",
   "main": "index.mjs",
+  "scripts": {
+    "build": "yarn run build-sync && yarn run build-prune && yarn run build-zip",
+    "build-sync": "rsync -crl --delete --exclude-from .lambdaignore . build",
+    "build-prune": "cd build && yarn --production",
+    "build-zip": "rm -f build.zip && cd build && zip -rq ../build.zip .",
+    "lint": "biome check",
+    "lint-ci": "biome ci",
+    "lint-fix": "biome check --write --unsafe",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest",
+    "watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest --watch",
+    "integration": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest --config test/integration.config.json",
+    "integration-watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest --config test/integration.config.json --watch"
+  },
   "repository": "https://github.com/PRX/stream-recorder.git",
   "author": "ryan cavis <ryan@prx.org>",
   "license": "AGPL-3.0",

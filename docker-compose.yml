@@ -1,0 +1,12 @@
+version: '2'
+services:
+  test:
+    build: .
+    image: streamrecorder
+    command: test
+    volumes:
+      - ./index.js:/app/index.js
+      - ./index.test.js:/app/index.test.js
+      - ./lib:/app/lib
+      - ./test:/app/test
+      - ./package.json:/app/package.json
