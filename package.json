@@ -1,0 +1,24 @@
+{
+  "name": "stream-recorder",
+  "version": "0.0.1",
+  "description": "Lambda for orchestrating stream recordings via Oxbow",
+  "main": "index.mjs",
+  "repository": "https://github.com/PRX/stream-recorder.git",
+  "author": "ryan cavis <ryan@prx.org>",
+  "license": "AGPL-3.0",
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "aws-sdk-client-mock": "^4.1.0",
+    "aws-sdk-client-mock-jest": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "jest": "^30.2.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.947.0",
+    "@aws-sdk/client-sns": "^3.947.0",
+    "@smithy/node-http-handler": "^4.4.5",
+    "lambda-log": "^3.1.0",
+    "uuid": "^13.0.0"
+  }
+}
