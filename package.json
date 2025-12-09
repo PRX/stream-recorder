@@ -37,5 +37,15 @@
     "@smithy/node-http-handler": "^4.4.5",
     "lambda-log": "^3.1.0",
     "uuid": "^13.0.0"
+  },
+  "jest": {
+    "restoreMocks": true,
+    "moduleNameMapper": {
+      "^aws-sdk-client-mock-jest$": "<rootDir>/node_modules/aws-sdk-client-mock-jest/dist/cjs/jest.js"
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "integration"
+    ]
   }
 }
