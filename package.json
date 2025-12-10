@@ -43,6 +43,7 @@
     "moduleNameMapper": {
       "^aws-sdk-client-mock-jest$": "<rootDir>/node_modules/aws-sdk-client-mock-jest/dist/cjs/jest.js"
     },
+    "setupFilesAfterEnv": ["<rootDir>/test/setup.js"],
     "testPathIgnorePatterns": [
       "/node_modules/",
       "integration"
