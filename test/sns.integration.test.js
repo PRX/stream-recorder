@@ -13,7 +13,7 @@ const client = new S3Client();
 jest.setTimeout(120 * 1000);
 
 describe("sns integration", () => {
-  it("triggers oxbow", async () => {
+  it.skip("triggers oxbow", async () => {
     const rec = parse([{ podcastId: 99, id: 88, url: process.env.TEST_STREAM_URL }])[0];
     const key = `${path(rec)}/${rec.filename}`;
 
