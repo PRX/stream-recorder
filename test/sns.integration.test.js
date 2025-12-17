@@ -40,13 +40,15 @@ describe("sns integration", () => {
   it.skip("triggers oxbow", async () => {
     const url = process.env.TEST_STREAM_URL;
     const callback = process.env.TEST_SQS_CALLBACK_URL;
-    const rec = parse([{ podcastId: 99, id: 88, url, callback }])[0];
+    const job_id = "99/88/:date/:hour";
+    const rec = parse([{ podcastId: 99, id: 88, url, callback, job_id }])[0];
     const key = `${path(rec)}/${rec.filename}`;
+    const hour = rec.hour.toISOString();
 
     // do a short 8 second recording
     const start = Date.now();
     rec.stop = new Date(start + 8000);
-    expect(await startRecording(rec)).toEqual(true);
+    expect(await startRecording(rec)).toEqual(0);
 
     // wait for the mp3 to show up
     let mp3 = null;
@@ -90,6 +92,7 @@ describe("sns integration", () => {
     const messages = await receiveSqsMessages();
     const result = messages.find((m) => m.JobResult);
     expect(messages.length).toEqual(3);
+    expect(result.JobResult.Job.Id).toEqual(`99/88/${hour.substr(0, 10)}/${hour.substr(11, 2)}`);
     expect(result.JobResult.TaskResults).toHaveLength(1);
     expect(result.JobResult.TaskResults[0].Task).toEqual("FFmpeg");
     expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].Duration).toEqual(8000);

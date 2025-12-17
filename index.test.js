@@ -8,8 +8,8 @@ import { mockS3Get, mockS3List, mockS3Put, mockSNSPublish } from "./test/support
 const cfg = [
   {
     id: 2,
-    gid: "gid://feeder/StreamRecording/2",
     podcast_id: 1,
+    job_id: "284/1/:date/:hour",
     url: "http://some/stream/url.mp3",
     callback: "https://some-sqs-url",
   },
