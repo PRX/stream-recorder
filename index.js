@@ -1,8 +1,8 @@
 import log from "lambda-log";
-import { parse } from "./lib/config";
-import { getConfig } from "./lib/http";
-import { getProgress, putProgress } from "./lib/s3";
-import { startRecording } from "./lib/sns";
+import { parse } from "./lib/config.js";
+import { getConfig } from "./lib/http.js";
+import { getProgress, putProgress } from "./lib/s3.js";
+import { startRecording } from "./lib/sns.js";
 
 const epoch = () => Date.now() / 1000;
 const startupTime = () => epoch() - (parseInt(process.env.OXBOW_STARTUP_TIME, 10) || 0);
