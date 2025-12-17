@@ -2,23 +2,50 @@ import { exec } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { jest } from "@jest/globals";
 import { parse } from "../lib/config";
 import { path } from "../lib/s3";
 import { startRecording } from "../lib/sns";
 
-const client = new S3Client();
+const s3Client = new S3Client();
+const sqsClient = new SQSClient();
+
+// helper to get/delete sqs messages
+async function receiveSqsMessages() {
+  const QueueUrl = process.env.TEST_SQS_CALLBACK_URL;
+  const cmd = new ReceiveMessageCommand({
+    QueueUrl,
+    MaxNumberOfMessages: 10,
+    VisibilityTimeout: 5,
+    WaitTimeSeconds: 2,
+  });
+  let res = await sqsClient.send(cmd);
+  const messages = [];
+  while (res.Messages?.length) {
+    for (const msg of res.Messages) {
+      messages.push(JSON.parse(msg.Body));
+      const ReceiptHandle = msg.ReceiptHandle;
+      await sqsClient.send(new DeleteMessageCommand({ QueueUrl, ReceiptHandle }));
+    }
+    res = await sqsClient.send(cmd);
+  }
+  return messages;
+}
 
 // waiting for oxbow is slooooow
 jest.setTimeout(120 * 1000);
 
 describe("sns integration", () => {
   it.skip("triggers oxbow", async () => {
-    const rec = parse([{ podcastId: 99, id: 88, url: process.env.TEST_STREAM_URL }])[0];
+    const url = process.env.TEST_STREAM_URL;
+    const callback = process.env.TEST_SQS_CALLBACK_URL;
+    const rec = parse([{ podcastId: 99, id: 88, url, callback }])[0];
     const key = `${path(rec)}/${rec.filename}`;
 
     // do a short 8 second recording
-    rec.stop = new Date(Date.now() + 8000);
+    const start = Date.now();
+    rec.stop = new Date(start + 8000);
     expect(await startRecording(rec)).toEqual(true);
 
     // wait for the mp3 to show up
@@ -26,9 +53,15 @@ describe("sns integration", () => {
     while (!mp3) {
       try {
         const cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key });
-        const res = await client.send(cmd);
+        const res = await s3Client.send(cmd);
         mp3 = await res.Body.transformToByteArray();
-      } catch (_err) {}
+      } catch (err) {
+        if (err.Code === "NoSuchKey") {
+          await new Promise((r) => setTimeout(r, 1000));
+        } else {
+          throw err;
+        }
+      }
     }
 
     // write the mp3 back to disk
@@ -46,10 +79,20 @@ describe("sns integration", () => {
     expect(parseFloat(probe.format.duration, 10)).toBeLessThan(9.0);
 
     // also get the .wip file
-    const cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: `${key}.wip` });
-    const res = await client.send(cmd);
-    const wip = JSON.parse(await res.Body.transformToString());
-    expect(wip.elapsed_seconds).toBeGreaterThan(4);
-    expect(wip.elapsed_seconds).toBeLessThan(9);
+    const s3Cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: `${key}.wip` });
+    const s3Res = await s3Client.send(s3Cmd);
+    const wip = JSON.parse(await s3Res.Body.transformToString());
+    expect(wip.start).toBeGreaterThan(start / 1000);
+    expect(wip.start).toBeLessThan(Date.now() / 1000);
+    expect(wip.now).toBeLessThan(Date.now() / 1000);
+
+    // get the SQS callback messages
+    const messages = await receiveSqsMessages();
+    const result = messages.find((m) => m.JobResult);
+    expect(messages.length).toEqual(3);
+    expect(result.JobResult.TaskResults).toHaveLength(1);
+    expect(result.JobResult.TaskResults[0].Task).toEqual("FFmpeg");
+    expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].Duration).toEqual(8000);
+    expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].StartEpoch).toEqual(wip.start);
   });
 });
