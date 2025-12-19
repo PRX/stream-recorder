@@ -5,7 +5,7 @@ import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { jest } from "@jest/globals";
 import { parse } from "../lib/config";
-import { path } from "../lib/s3";
+import { key, wip } from "../lib/s3";
 import { startRecording } from "../lib/sns";
 
 const s3Client = new S3Client();
@@ -40,10 +40,7 @@ describe("sns integration", () => {
   it.skip("triggers oxbow", async () => {
     const url = process.env.TEST_STREAM_URL;
     const callback = process.env.TEST_SQS_CALLBACK_URL;
-    const job_id = "99/88/:date/:hour";
-    const rec = parse([{ podcastId: 99, id: 88, url, callback, job_id }])[0];
-    const key = `${path(rec)}/${rec.filename}`;
-    const hour = rec.hour.toISOString();
+    const rec = parse([{ podcast_id: 99, id: 88, url, callback }])[0];
 
     // do a short 8 second recording
     const start = Date.now();
@@ -54,7 +51,7 @@ describe("sns integration", () => {
     let mp3 = null;
     while (!mp3) {
       try {
-        const cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key });
+        const cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key(rec) });
         const res = await s3Client.send(cmd);
         mp3 = await res.Body.transformToByteArray();
       } catch (err) {
@@ -81,21 +78,29 @@ describe("sns integration", () => {
     expect(parseFloat(probe.format.duration, 10)).toBeLessThan(9.0);
 
     // also get the .wip file
-    const s3Cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: `${key}.wip` });
+    const s3Cmd = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: wip(rec) });
     const s3Res = await s3Client.send(s3Cmd);
-    const wip = JSON.parse(await s3Res.Body.transformToString());
-    expect(wip.start).toBeGreaterThan(start / 1000);
-    expect(wip.start).toBeLessThan(Date.now() / 1000);
-    expect(wip.now).toBeLessThan(Date.now() / 1000);
+    const info = JSON.parse(await s3Res.Body.transformToString());
+    expect(info.start).toBeGreaterThan(start / 1000);
+    expect(info.start).toBeLessThan(Date.now() / 1000);
+    expect(info.now).toBeLessThan(Date.now() / 1000);
 
     // get the SQS callback messages
     const messages = await receiveSqsMessages();
     const result = messages.find((m) => m.JobResult);
     expect(messages.length).toEqual(3);
-    expect(result.JobResult.Job.Id).toEqual(`99/88/${hour.substr(0, 10)}/${hour.substr(11, 2)}`);
     expect(result.JobResult.TaskResults).toHaveLength(1);
     expect(result.JobResult.TaskResults[0].Task).toEqual("FFmpeg");
     expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].Duration).toEqual(8000);
-    expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].StartEpoch).toEqual(wip.start);
+    expect(result.JobResult.TaskResults[0].FFmpeg.Outputs[0].StartEpoch).toEqual(info.start);
+
+    // job ids include the recorded UTC timeframe
+    const parts = result.JobResult.Job.Id.split("/");
+    expect(parts).toHaveLength(5);
+    expect(parts[0]).toEqual("99");
+    expect(parts[1]).toEqual("88");
+    expect(Date.parse(parts[2])).toEqual(rec.hour.getTime());
+    expect(Date.parse(parts[3])).toEqual(rec.hour.getTime() + 3600 * 1000);
+    expect(parts[4]).toMatch(/^[0-9a-f-]{36}\.mp3$/);
   });
 });
