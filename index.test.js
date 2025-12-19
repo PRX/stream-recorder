@@ -9,7 +9,6 @@ const cfg = [
   {
     id: 2,
     podcast_id: 1,
-    job_id: "284/1/:date/:hour",
     url: "http://some/stream/url.mp3",
     callback: "https://some-sqs-url",
   },
@@ -38,7 +37,7 @@ describe("index", () => {
       mockS3List({});
       mockS3Put((params) => {
         expect(params.Bucket).toEqual("my-bucket");
-        expect(params.Key).toMatch("1/2/2025-12-09/22/");
+        expect(params.Key).toMatch("1/2/2025-12-09T22:00Z/2025-12-09T23:00Z");
         expect(params.Key).toMatch(".mp3.wip");
         expect(JSON.parse(params.Body).oxbow).toEqual(0);
         expect(JSON.parse(params.Body).pending).toBeGreaterThanOrEqual(epoch);
@@ -62,7 +61,7 @@ describe("index", () => {
       mockTime("2025-12-09T23:30Z");
       mockS3List({});
       mockS3Put((params) => {
-        expect(params.Key).toMatch("1/2/2025-12-09/23/");
+        expect(params.Key).toMatch("1/2/2025-12-09T23:00Z/2025-12-10T00:00Z");
       });
       mockSNSPublish((params) => {
         expect(params.TopicArn).toEqual("topic1");
@@ -96,7 +95,7 @@ describe("index", () => {
       mockS3List({ Contents: [{ Key: "1/2/2025-12-09/22/foo.mp3.wip" }] });
       mockS3Get({ Body: `{"now":${epoch - 120}}` });
       mockS3Put((params) => {
-        expect(params.Key).toMatch("1/2/2025-12-09/22/");
+        expect(params.Key).toMatch("1/2/2025-12-09T22:00Z/2025-12-09T23:00Z");
       });
       mockSNSPublish((params) => {
         expect(params.TopicArn).toEqual("topic1");
@@ -130,7 +129,7 @@ describe("index", () => {
       mockS3List({ Contents: [{ Key: "1/2/2025-12-09/22/foo.mp3.wip" }] });
       mockS3Get({ Body: `{"pending":${epoch - 120},"oxbow":0}` });
       mockS3Put((params) => {
-        expect(params.Key).toMatch("1/2/2025-12-09/22/");
+        expect(params.Key).toMatch("1/2/2025-12-09T22:00Z/2025-12-09T23:00Z");
         expect(JSON.parse(params.Body).oxbow).toEqual(1);
       });
       mockSNSPublish((params) => {
@@ -150,7 +149,7 @@ describe("index", () => {
       mockS3List({ Contents: [{ Key: "1/2/2025-12-09/22/foo.mp3.wip" }] });
       mockS3Get({ Body: `{"pending":${epoch - 120}}` });
       mockS3Put((params) => {
-        expect(params.Key).toMatch("1/2/2025-12-09/22/");
+        expect(params.Key).toMatch("1/2/2025-12-09T22:00Z/2025-12-09T23:00Z");
       });
       mockSNSPublish((params) => {
         expect(params.TopicArn).toEqual("topic1");

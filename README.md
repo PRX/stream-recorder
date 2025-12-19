@@ -25,7 +25,6 @@ and has a format something like:
   {
     "podcast_id": 123,
     "id": 456,
-    "job_id": "123/456/:date/:hour",
     "url": "http://some.stream/url.mp3",
     "start_date": "2025-12-17",
     "end_date": null,
