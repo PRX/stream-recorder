@@ -26,11 +26,11 @@ export const handler = async (_event) => {
     try {
       const wip = await getProgress(rec);
       if (wip?.pending) {
-        handlePending(rec, wip);
+        await handlePending(rec, wip);
       } else if (wip) {
-        handleRunning(rec, wip);
+        await handleRunning(rec, wip);
       } else {
-        handleNew(rec);
+        await handleNew(rec);
       }
     } catch (err) {
       log.error("Recording error!", { error: err, ...rec });
