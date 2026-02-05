@@ -30,6 +30,7 @@ and has a format something like:
     "end_date": null,
     "record_days": [0, 3, 5],
     "record_hours": [13, 19, 22],
+    "time_zone": "America/Denver",
     "callback": "https://sqs.us-east-1.amazonaws.com/123/my_queue_name"
   }
 ]
